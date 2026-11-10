@@ -1,0 +1,5 @@
+{
+  "granite": "0.1.0",
+  "name": "parrot-c",
+  "runner": "agent"
+}

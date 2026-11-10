@@ -14,12 +14,17 @@
 #include "granitec/object.h"
 #include "granitec/thread.h"
 
+static bool tracing = false;
+static pthread_once_t tracing_read = PTHREAD_ONCE_INIT;
+
+static void read_tracing(void) {
+    const char *said = getenv("GRANITE_AGENT_TRACE");
+    tracing = said && strcmp(said, "1") == 0;
+}
+
 void granite_trace(const char *arrow, const char *line, size_t len) {
-    static int tracing = -1;
-    if (tracing < 0) {
-        const char *said = getenv("GRANITE_AGENT_TRACE");
-        tracing = said && strcmp(said, "1") == 0;
-    }
+    /* Read once, by whichever thread traces first: two would race on it. */
+    pthread_once(&tracing_read, read_tracing);
     if (!tracing) return;
     size_t shown = len < 300 ? len : 300;
     while (shown && line[shown - 1] == '\n') shown--;
