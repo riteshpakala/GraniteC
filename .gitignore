@@ -65,3 +65,4 @@ dkms.conf
 !agents/tests/json/corpus.hex
 /scripts/wire-golden/Cargo.lock
 !agents/tests/wire/corpus.hex
+__pycache__/
