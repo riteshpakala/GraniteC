@@ -39,8 +39,8 @@ void *granite_retain(void *pointer) {
 /* Drops one weak reference: the memory goes with the last. Runs nobody's code, so it is safe
  * under a lock. */
 static void weak_drop(granite_object *object) {
-    if (atomic_fetch_sub_explicit(&object->weak, 1, memory_order_release) == 1) {
-        atomic_thread_fence(memory_order_acquire);
+    /* acq_rel, not release + an acquire fence: the same order, and one ThreadSanitizer can see. */
+    if (atomic_fetch_sub_explicit(&object->weak, 1, memory_order_acq_rel) == 1) {
         atomic_fetch_sub_explicit(&objects_alive, 1, memory_order_relaxed);
         free(object);
     }
@@ -54,9 +54,8 @@ void granite_release(void *pointer) {
         snprintf(what, sizeof what, "released a %s", object->granite_class->name);
         granite_lock_check(what);
     }
-    size_t before = atomic_fetch_sub_explicit(&object->strong, 1, memory_order_release);
+    size_t before = atomic_fetch_sub_explicit(&object->strong, 1, memory_order_acq_rel);
     if (before == 1) {
-        atomic_thread_fence(memory_order_acquire);
         if (object->granite_class->deinit) object->granite_class->deinit(object);
         weak_drop(object);
     } else if (before == 0) {
