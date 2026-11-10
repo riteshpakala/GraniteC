@@ -47,9 +47,11 @@ void granite_runs_tap(granite_runs *runs, void *receiver, granite_handler handle
 
 /* Starts a run keyed `key` (or queues it for a lane), offered `host`, with `job` (released with
  * `job_release` when the run is over), and blocks until it settles: NULL when it finished, else
- * what it ended with (the caller frees it). Never call it from main. */
-granite_error *granite_runs_perform(granite_runs *runs, const char *key, granite_host *host, void *job,
-                                    void (*job_release)(void *));
+ * what it ended with (the caller frees it). A run whose `requested` flag (optional) is set by the
+ * turn that would start it settles cancelled without starting; one set later is the caller's to
+ * pass on with granite_runs_cancel. Never call it from main. */
+granite_error *granite_runs_perform(granite_runs *runs, const char *key, granite_host *host, granite_cancel *requested,
+                                    void *job, void (*job_release)(void *));
 /* Cancels the run keyed `key`, live or waiting for a lane, from any thread. */
 void granite_runs_cancel(granite_runs *runs, const char *key);
 /* What the engine has counted, read on main. */

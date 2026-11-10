@@ -87,7 +87,7 @@ GRANITE_TEST(a_finished_run_settles_after_its_events_reached_the_taps) {
     heard h = {{0}, 0};
     void *tap = granite_anchor_new();
     granite_runs_tap(runs, tap, hear, &h, NULL);
-    granite_error *error = granite_runs_perform(runs, "plate-1", NULL, make_job(3, 0.001, FINISH), free_job);
+    granite_error *error = granite_runs_perform(runs, "plate-1", NULL, NULL, make_job(3, 0.001, FINISH), free_job);
     GRANITE_ASSERT(error == NULL);
     GRANITE_ASSERT_STR(granite_buf_str(&h.text), "plate-1:1;plate-1:2;plate-1:3;");
     granite_runs_state state = granite_runs_read_state(runs);
@@ -102,11 +102,11 @@ GRANITE_TEST(a_finished_run_settles_after_its_events_reached_the_taps) {
 
 GRANITE_TEST(the_runs_own_refusal_keeps_its_kind_and_a_fault_is_said_as_it_is) {
     granite_runs *runs = granite_runs_new("plate", "PackageRun", 2, &owner_token, compute, body);
-    granite_error *refused = granite_runs_perform(runs, "a", NULL, make_job(1, 0, REFUSE), free_job);
+    granite_error *refused = granite_runs_perform(runs, "a", NULL, NULL, make_job(1, 0, REFUSE), free_job);
     GRANITE_ASSERT(refused && refused->type == GRANITE_ERROR_REFUSED);
     GRANITE_ASSERT_EQ(refused->kind, GRANITE_REFUSAL_CALL);
     GRANITE_ASSERT_STR(refused->said, "plate needs a title");
-    granite_error *fault = granite_runs_perform(runs, "b", NULL, make_job(0, 0, FAULT), free_job);
+    granite_error *fault = granite_runs_perform(runs, "b", NULL, NULL, make_job(0, 0, FAULT), free_job);
     GRANITE_ASSERT(fault && fault->type == GRANITE_ERROR_FAULT);
     GRANITE_ASSERT_STR(fault->said, "the disk is full");
     granite_runs_state state = granite_runs_read_state(runs);
@@ -121,8 +121,8 @@ GRANITE_TEST(the_runs_own_refusal_keeps_its_kind_and_a_fault_is_said_as_it_is) {
 GRANITE_TEST(a_compute_that_fails_is_the_engines_sentence) {
     granite_runs *runs = granite_runs_new("plate", "PackageRun", 2, &owner_token, compute, body);
     atomic_store(&fail_compute, 1);
-    granite_error *first = granite_runs_perform(runs, "a", NULL, make_job(1, 0, FINISH), free_job);
-    granite_error *second = granite_runs_perform(runs, "b", NULL, make_job(1, 0, FINISH), free_job);
+    granite_error *first = granite_runs_perform(runs, "a", NULL, NULL, make_job(1, 0, FINISH), free_job);
+    granite_error *second = granite_runs_perform(runs, "b", NULL, NULL, make_job(1, 0, FINISH), free_job);
     atomic_store(&fail_compute, 0);
     GRANITE_ASSERT(first && first->type == GRANITE_ERROR_FAULT);
     GRANITE_ASSERT_STR(first->said, "PackageRun-1 failed: no GPU here");
@@ -141,7 +141,7 @@ typedef struct performer {
 
 static void *perform_on_a_thread(void *pointer) {
     performer *p = pointer;
-    p->result = granite_runs_perform(p->runs, p->key, NULL, p->job, free_job);
+    p->result = granite_runs_perform(p->runs, p->key, NULL, NULL, p->job, free_job);
     return NULL;
 }
 
@@ -205,7 +205,7 @@ GRANITE_TEST(a_cancel_settles_at_once_and_drops_what_the_run_says_after) {
 
 static void perform_from_main(void *pointer) {
     granite_runs *runs = pointer;
-    granite_error *error = granite_runs_perform(runs, "x", NULL, make_job(0, 0, FINISH), free_job);
+    granite_error *error = granite_runs_perform(runs, "x", NULL, NULL, make_job(0, 0, FINISH), free_job);
     if (!error || error->type != GRANITE_ERROR_FAULT) GRANITE_FAIL("performing from main was not refused");
     granite_error_free(error);
 }

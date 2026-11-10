@@ -28,6 +28,7 @@ typedef struct run_record {
     char *key;
     granite_cancel *cancel;
     granite_host *host;
+    granite_cancel *requested;
     void *job;
     void (*job_release)(void *);
     waiter *waiter; /* main-only: whoever performs it, until it settles */
@@ -84,6 +85,7 @@ static void record_deinit(void *self) {
     run_record *r = self;
     if (r->job_release) r->job_release(r->job);
     granite_release(r->host);
+    granite_release(r->requested);
     granite_release(r->cancel);
     granite_release(r->runs);
     free(r->raw);
@@ -298,6 +300,13 @@ static void start_turn(void *pointer) {
     run_record *r = s->record;
     runs->counter++;
     r->raw = granite_strdupf("%s-%llu", runs->label, (unsigned long long)runs->counter);
+    /* Cancelled before it could start: it ends as a queued run cancelled would. */
+    if (granite_cancel_is_set(r->requested)) {
+        runs->state.cancelled++;
+        settle(r, granite_cancelled());
+        granite_release(r);
+        return;
+    }
     /* A key that is live, or waiting, is the same call asked for again: the newer replaces it. */
     for (size_t i = 0; i < runs->live_count; i++) {
         if (strcmp(runs->live[i]->key, r->key) == 0) {
@@ -322,8 +331,8 @@ static void start_turn(void *pointer) {
     launch(runs, r);
 }
 
-granite_error *granite_runs_perform(granite_runs *runs, const char *key, granite_host *host, void *job,
-                                    void (*job_release)(void *)) {
+granite_error *granite_runs_perform(granite_runs *runs, const char *key, granite_host *host, granite_cancel *requested,
+                                    void *job, void (*job_release)(void *)) {
     if (granite_main_is_current()) {
         if (job_release) job_release(job);
         return granite_fault("a run was performed from main, which would wait on itself");
@@ -336,6 +345,7 @@ granite_error *granite_runs_perform(granite_runs *runs, const char *key, granite
     r->key = granite_strdup(key);
     r->cancel = granite_cancel_new();
     r->host = host ? granite_retain(host) : granite_host_none();
+    r->requested = granite_retain(requested);
     r->job = job;
     r->job_release = job_release;
     r->waiter = &w;
