@@ -1,0 +1,12 @@
+# What serde_json makes of each JSON case: the goldens GraniteC's reader and writers are held to.
+# Pinned to the serde_json GraniteRust builds with; scripts/json-goldens.sh runs it.
+[package]
+name = "serde-golden"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+serde_json = "=1.0.154"
+
+[workspace]

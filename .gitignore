@@ -61,3 +61,4 @@ dkms.conf
 !*.h
 !*.md
 !*.json
+/scripts/serde-golden/Cargo.lock
