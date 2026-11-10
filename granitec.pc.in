@@ -1,0 +1,14 @@
+prefix=@PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+schemadir=${prefix}/share/granitec/schemas
+commit=@COMMIT@
+
+Name: granitec
+Description: Granite's agent kernel and the granite-agent/1 standard in C
+URL: https://github.com/riteshpakala/GraniteC
+Version: @VERSION@
+Requires: json-c >= 0.15
+Libs: -L${libdir} -lgranitec -pthread -lm
+Cflags: -I${includedir} -pthread

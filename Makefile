@@ -5,6 +5,8 @@
 #   make                 libgranitec.a (core + agents), and the granite command
 #   make test            build and run <pkg>/tests/test_*.c, with the fixture runners
 #   make install         PREFIX=/usr/local DESTDIR=…: the library, headers, granitec.pc, granite, the schemas
+#   make uninstall       what install put there
+#   make install-check   install into a scratch prefix and build the fixture agent against it
 #   make lint            the rules a compiler cannot check (see the lint target)
 #   make drift-check     Schema/ against a Granite checkout (GRANITE_DIR=../Granite)
 #   make interop         this build against GraniteRust's (RUST_DIR=../GraniteRust)
@@ -71,7 +73,7 @@ test_libs_host := $(HOST_LIB) $(LIB)
 test_libs_jsonschema := $(HOST_LIB) $(LIB)
 test_libs_cli := $(HOST_LIB) $(LIB)
 
-.PHONY: all test install uninstall lint drift-check interop clean check-deps
+.PHONY: all test install uninstall install-check lint drift-check interop clean check-deps
 all: $(LIB) $(CLI)
 
 $(O)/obj/%.o: %.c
@@ -125,6 +127,39 @@ test: $(ALL_TESTS) $(FIXTURES) $(CLI) $(UNINSTALLED_PC)
 	  GRANITE_SRC="$(CURDIR)" GRANITE_BUILD="$(abspath $(O))" GRANITE_CLI="$(abspath $(O))/bin/$(CLI_NAME)" \
 	  PKG_CONFIG_PATH="$(abspath $(O))/pkgconfig$${PKG_CONFIG_PATH:+:$$PKG_CONFIG_PATH}" $$t || fail=1; \
 	done; [ $$fail = 0 ] && echo "granitec: every test passed"
+
+# What an author links and includes, and where install puts it. runs.h and every host and
+# jsonschema header stay the command's own.
+PUBLIC_HEADERS := $(wildcard core/include/granitec/*.h agents/include/granitec/*.h)
+SHARED_SCHEMAS := $(wildcard Schema/*.json containers/schemas/*.json)
+LIBDIR := $(DESTDIR)$(PREFIX)/lib
+INCLUDEDIR := $(DESTDIR)$(PREFIX)/include/granitec
+BINDIR := $(DESTDIR)$(PREFIX)/bin
+SCHEMADIR := $(DESTDIR)$(PREFIX)/share/granitec/schemas
+DOCDIR := $(DESTDIR)$(PREFIX)/share/doc/granitec
+
+# granitec.pc is written by install itself, for the PREFIX and commit of that install: a file kept
+# in the build tree would keep the PREFIX of whichever install made it first.
+install: all
+	install -d $(LIBDIR)/pkgconfig $(INCLUDEDIR) $(BINDIR) $(SCHEMADIR) $(DOCDIR)
+	install -m 644 $(LIB) $(LIBDIR)/
+	install -m 644 $(PUBLIC_HEADERS) $(INCLUDEDIR)/
+	sed -e 's|@PREFIX@|$(PREFIX)|' -e 's|@VERSION@|$(VERSION)|' -e 's|@COMMIT@|$(GRANITE_COMMIT)|' \
+	  granitec.pc.in > $(LIBDIR)/pkgconfig/granitec.pc
+	chmod 644 $(LIBDIR)/pkgconfig/granitec.pc
+	install -m 755 $(CLI) $(BINDIR)/
+	install -m 644 $(SHARED_SCHEMAS) $(SCHEMADIR)/
+	install -m 644 README.md PORTING.md Schema/GraniteAgent.md $(DOCDIR)/
+
+uninstall:
+	rm -f $(LIBDIR)/libgranitec.a $(LIBDIR)/pkgconfig/granitec.pc $(BINDIR)/$(CLI_NAME)
+	rm -f $(foreach h,$(PUBLIC_HEADERS),$(INCLUDEDIR)/$(notdir $(h)))
+	rm -f $(foreach s,$(SHARED_SCHEMAS),$(SCHEMADIR)/$(notdir $(s)))
+	rm -f $(DOCDIR)/README.md $(DOCDIR)/PORTING.md $(DOCDIR)/GraniteAgent.md
+	-rmdir $(INCLUDEDIR) $(SCHEMADIR) $(DESTDIR)$(PREFIX)/share/granitec $(DOCDIR) 2>/dev/null
+
+install-check: all $(FIXTURES)
+	@sh scripts/install-check.sh
 
 # What no compiler checks. Only the lock takes a mutex: everything else goes through
 # granite_lock, which counts what a thread holds. Only json.c frees a json-c tree: everything
