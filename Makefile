@@ -108,11 +108,22 @@ $$(O)/tests/$(1)/%: $$(O)/obj/$(1)/tests/%.o $$(test_libs_$(1))
 endef
 $(foreach p,$(PKGS),$(eval $(call package_tests,$(p))))
 
+# granitec as pkg-config sees it in this build tree: pkg-config prefers granitec-uninstalled.pc
+# on its path, so an agent repository builds against this tree exactly as against an install.
+UNINSTALLED_PC := $(O)/pkgconfig/granitec-uninstalled.pc
+$(UNINSTALLED_PC): Makefile
+	@mkdir -p $(@D)
+	@printf '%s\n' 'Name: granitec' 'Description: GraniteC, in its build tree' 'Version: $(VERSION)' \
+	  'commit=$(GRANITE_COMMIT)' 'Requires: json-c >= 0.15' \
+	  'Cflags: -I$(CURDIR)/core/include -I$(CURDIR)/agents/include -pthread $(GRANITE_SAN)' \
+	  'Libs: $(abspath $(O))/lib/libgranitec.a -pthread -lm $(GRANITE_SAN)' > $@
+
 # Each test runs from the source root with where things are: GRANITE_SRC (fixtures, schemas),
-# GRANITE_BUILD (the runners and the command this build made).
-test: $(ALL_TESTS) $(FIXTURES) $(CLI)
+# GRANITE_BUILD (the runners and the command this build made), and this tree on PKG_CONFIG_PATH.
+test: $(ALL_TESTS) $(FIXTURES) $(CLI) $(UNINSTALLED_PC)
 	@fail=0; for t in $(ALL_TESTS); do echo "== $$t"; \
-	  GRANITE_SRC="$(CURDIR)" GRANITE_BUILD="$(abspath $(O))" GRANITE_CLI="$(abspath $(O))/bin/$(CLI_NAME)" $$t || fail=1; \
+	  GRANITE_SRC="$(CURDIR)" GRANITE_BUILD="$(abspath $(O))" GRANITE_CLI="$(abspath $(O))/bin/$(CLI_NAME)" \
+	  PKG_CONFIG_PATH="$(abspath $(O))/pkgconfig$${PKG_CONFIG_PATH:+:$$PKG_CONFIG_PATH}" $$t || fail=1; \
 	done; [ $$fail = 0 ] && echo "granitec: every test passed"
 
 # What no compiler checks. Only the lock takes a mutex: everything else goes through

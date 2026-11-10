@@ -123,8 +123,11 @@ char *granite_path_join(const char *a, const char *b) {
 
 char *granite_temporary_folder(const char *what) {
     const char *base = getenv("TMPDIR");
-    char *pattern = granite_strdupf("%s/granitec-%s-XXXXXX", base && *base ? base : "/tmp", what);
-    for (char *c = pattern + strlen(base && *base ? base : "/tmp") + 1; *c; c++)
+    if (!base || !*base) base = "/tmp";
+    size_t n = strlen(base);
+    while (n > 1 && base[n - 1] == '/') n--; /* macOS's TMPDIR ends with one */
+    char *pattern = granite_strdupf("%.*s/granitec-%s-XXXXXX", (int)n, base, what);
+    for (char *c = pattern + n + 1; *c; c++)
         if (*c == '/') *c = '-';
     char *made = mkdtemp(pattern);
     if (!made) {
