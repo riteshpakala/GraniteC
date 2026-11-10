@@ -182,7 +182,7 @@ drift-check:
 	@echo "drift-check: Schema/ matches $(GRANITE_DIR)/Schema"
 
 RUST_DIR ?= ../GraniteRust
-interop: all $(FIXTURES)
+interop: all $(FIXTURES) $(UNINSTALLED_PC)
 	@sh scripts/interop.sh "$(abspath $(O))" "$(RUST_DIR)"
 
 check-deps:

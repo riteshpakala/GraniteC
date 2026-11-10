@@ -1,0 +1,6 @@
+.git/
+build/
+build-*/
+**/__pycache__/
+scripts/serde-golden/target/
+scripts/wire-golden/target/

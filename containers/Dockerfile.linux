@@ -1,0 +1,10 @@
+# syntax=docker/dockerfile:1
+# GraniteC's own suite on Linux (arm64 under Apple's container): scripts/conformance-linux.sh. gcc
+# 12, json-c 0.16, glibc's posix_spawn and wait4's kilobytes are what it proves.
+FROM docker.io/library/debian:bookworm-slim
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends build-essential pkg-config libjson-c-dev git ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /src/GraniteC
+COPY . .
+CMD ["scripts/check.sh"]
