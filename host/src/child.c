@@ -164,7 +164,9 @@ granite_child *granite_child_spawn(const char *executable, const char *const *ar
     for (size_t i = 0; i < count; i++) argv[i + 1] = (char *)arguments[i];
 
     pid_t pid = 0;
-    int status = posix_spawn(&pid, executable, &actions, &attributes, argv, environment);
+    /* A bare name is found on PATH, as Rust's Command finds it; a path is taken as it is. */
+    int status = strchr(executable, '/') ? posix_spawn(&pid, executable, &actions, &attributes, argv, environment)
+                                         : posix_spawnp(&pid, executable, &actions, &attributes, argv, environment);
     free(argv);
     posix_spawn_file_actions_destroy(&actions);
     posix_spawnattr_destroy(&attributes);
@@ -177,7 +179,8 @@ granite_child *granite_child_spawn(const char *executable, const char *const *ar
         close(err[0]);
         *error = granite_remote_new(GRANITE_REMOTE_SPAWN, NULL);
         (*error)->path = granite_strdup(executable);
-        (*error)->reason = granite_strdup(strerror(status));
+        /* Rust's io::Error says the system's sentence and its number. */
+        (*error)->reason = granite_strdupf("%s (os error %d)", strerror(status), status);
         return NULL;
     }
 

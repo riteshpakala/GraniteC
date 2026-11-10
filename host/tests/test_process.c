@@ -145,7 +145,7 @@ GRANITE_TEST(each_way_a_call_ends_is_classified_as_rust_classifies_it) {
     granite_process *missing = granite_process_new("/nowhere/runner", NULL);
     error = granite_process_perform(missing, "parrot", "{}", 2, NULL, NULL, &output, NULL, NULL);
     said = said_by(error);
-    GRANITE_ASSERT_STR(said, "could not start /nowhere/runner: No such file or directory");
+    GRANITE_ASSERT_STR(said, "could not start /nowhere/runner: No such file or directory (os error 2)");
     free(said);
     granite_remote_free(error);
     granite_process_free(missing);
