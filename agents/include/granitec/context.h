@@ -17,6 +17,7 @@
 #include "granitec/error.h"
 #include "granitec/json.h"
 #include "granitec/object.h"
+#include "granitec/schema.h"
 
 /* --- cancelling ---------------------------------------------------------------------------- */
 
@@ -91,6 +92,11 @@ void *granite_context_compute(const granite_context *context);
 /* Asks the host's model for a JSON object that fits `schema`; blocks until it answers. NULL with
  * the object in `*object`, or a model refusal (no model, no answer, cancelled). */
 granite_error *granite_ask_object(granite_context *context, const json_object *schema, const char *system,
+                                  const char *user, uint32_t max_tokens, double seconds, json_object **object);
+/* Asks the host's model for an object that reads as `schema` (shown to it as JSON Schema, each
+ * field's note beside it): Rust's object_as. An answer that does not read is a model refusal,
+ * "the host's model answered something that does not decode: …". */
+granite_error *granite_ask_schema(granite_context *context, const granite_schema *schema, const char *system,
                                   const char *user, uint32_t max_tokens, double seconds, json_object **object);
 /* Asks the host's model for text; `*text` is the caller's to free. */
 granite_error *granite_ask_text(granite_context *context, const char *system, const char *user, uint32_t max_tokens,

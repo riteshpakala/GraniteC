@@ -141,6 +141,20 @@ GRANITE_TEST(a_context_delivers_notes_and_asks_its_hosts_model) {
     char *written = granite_json_write(answer, NULL);
     GRANITE_ASSERT_STR(written, "{\"maxTokens\":300,\"schema\":{\"type\":\"object\"},\"system\":\"be brief\",\"user\":\"a cat\"}");
     free(written);
+    static const granite_field wanted_fields[] = {{"maxTokens", {GRANITE_SCHEMA_INTEGER, NULL, NULL, NULL}, true, NULL},
+                                                  {NULL, {0}, false, NULL}};
+    static const granite_schema wanted = {GRANITE_SCHEMA_OBJECT, NULL, NULL, wanted_fields};
+    json_object *typed = NULL;
+    GRANITE_ASSERT(granite_ask_schema(context, &wanted, "s", "u", 9, 1, &typed) == NULL);
+    granite_json_put(typed);
+    static const granite_field strict_fields[] = {{"missing", {GRANITE_SCHEMA_STRING, NULL, NULL, NULL}, true, NULL},
+                                                  {NULL, {0}, false, NULL}};
+    static const granite_schema strict = {GRANITE_SCHEMA_OBJECT, NULL, NULL, strict_fields};
+    granite_error *undecoded = granite_ask_schema(context, &strict, "s", "u", 9, 1, &typed);
+    GRANITE_ASSERT(undecoded && typed == NULL);
+    GRANITE_ASSERT_STR(undecoded ? undecoded->said : NULL,
+                       "the host's model answered something that does not decode: missing field `missing`");
+    granite_error_free(undecoded);
     char *text = NULL;
     GRANITE_ASSERT(granite_ask_text(context, "sys", "usr", 10, 5, &text) == NULL);
     GRANITE_ASSERT_STR(text, "sys / usr");
@@ -150,7 +164,7 @@ GRANITE_TEST(a_context_delivers_notes_and_asks_its_hosts_model) {
     GRANITE_ASSERT(granite_context_is_cancelled(context));
     granite_error *refused = granite_ask_text(context, "sys", "usr", 10, 5, &text);
     GRANITE_ASSERT(refused && refused->kind == GRANITE_REFUSAL_MODEL);
-    GRANITE_ASSERT_EQ(model->asks, 2);
+    GRANITE_ASSERT_EQ(model->asks, 4);
     granite_error_free(refused);
 
     granite_json_put(answer);

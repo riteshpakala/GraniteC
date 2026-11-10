@@ -63,3 +63,5 @@ dkms.conf
 !*.json
 /scripts/serde-golden/Cargo.lock
 !agents/tests/json/corpus.hex
+/scripts/wire-golden/Cargo.lock
+!agents/tests/wire/corpus.hex

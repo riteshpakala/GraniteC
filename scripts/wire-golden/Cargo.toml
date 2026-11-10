@@ -1,0 +1,12 @@
+# What GraniteRust's AgentWire::read makes of each line: the goldens GraniteC's wire is held to.
+# Needs a GraniteRust checkout beside this one; scripts/wire-goldens.sh runs it.
+[package]
+name = "wire-golden"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+granite-agents = { path = "../../../GraniteRust/crates/granite-agents" }
+
+[workspace]

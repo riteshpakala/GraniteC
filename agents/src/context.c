@@ -203,3 +203,18 @@ granite_error *granite_ask_text(granite_context *context, const char *system, co
     return model->methods->text(model, system ? system : "", user ? user : "", max_tokens, seconds, context->cancel,
                                 text);
 }
+
+granite_error *granite_ask_schema(granite_context *context, const granite_schema *schema, const char *system,
+                                  const char *user, uint32_t max_tokens, double seconds, json_object **object) {
+    json_object *shown = granite_schema_json_schema(schema, false);
+    granite_error *error = granite_ask_object(context, shown, system, user, max_tokens, seconds, object);
+    granite_json_put(shown);
+    if (error) return error;
+    char *said = granite_schema_check(schema, *object);
+    if (!said) return NULL;
+    granite_json_put(*object);
+    *object = NULL;
+    error = granite_host_bad_answer("%s", said);
+    free(said);
+    return error;
+}
