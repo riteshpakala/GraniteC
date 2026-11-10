@@ -53,3 +53,11 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# GraniteC: every build folder, and the sources the patterns above would catch (*.mod* is
+# a kernel module's, not model.c's).
+/build*/
+!*.c
+!*.h
+!*.md
+!*.json
