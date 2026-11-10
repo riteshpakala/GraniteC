@@ -6,9 +6,12 @@
 #define GRANITE_TEST_H
 
 #include <math.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 static int granite_test_failures = 0;
 static int granite_test_case_failed = 0;
@@ -42,6 +45,43 @@ static inline const char *granite_test_build_path(const char *relative, char *ou
     const char *root = getenv("GRANITE_BUILD");
     snprintf(out, n, "%s/%s", root && *root ? root : "build", relative);
     return out;
+}
+
+/* Whether `body` aborts, in a child, saying something that contains `said` on stderr: how a test
+ * shows a rule the runtime holds (a nested lock, a release under one) fails the way it should. */
+static inline int granite_test_aborts(void (*body)(void), const char *said) {
+    int pipes[2];
+    if (pipe(pipes) != 0) return 0;
+    fflush(stdout);
+    fflush(stderr);
+    pid_t child = fork();
+    if (child < 0) return 0;
+    if (child == 0) {
+        dup2(pipes[1], 2);
+        close(pipes[0]);
+        close(pipes[1]);
+        signal(SIGABRT, SIG_DFL);
+        body();
+        _exit(0);
+    }
+    close(pipes[1]);
+    char text[4096];
+    size_t used = 0;
+    ssize_t n;
+    while (used + 1 < sizeof text && (n = read(pipes[0], text + used, sizeof text - 1 - used)) > 0) used += (size_t)n;
+    text[used] = '\0';
+    close(pipes[0]);
+    int status = 0;
+    waitpid(child, &status, 0);
+    if (!WIFSIGNALED(status) || WTERMSIG(status) != SIGABRT) {
+        fprintf(stderr, "  the child did not abort (status %d); it said: %s\n", status, text);
+        return 0;
+    }
+    if (said && !strstr(text, said)) {
+        fprintf(stderr, "  the child aborted saying: %s(expected it to say \"%s\")\n", text, said);
+        return 0;
+    }
+    return 1;
 }
 
 #endif
